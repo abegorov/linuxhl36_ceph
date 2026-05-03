@@ -1,0 +1,44 @@
+---
+- name: Gather distribution facts
+  ansible.builtin.setup:
+    gather_subset: ['!all', '!min', distribution]
+
+- name: Update sources.list
+  ansible.builtin.copy:
+    content: '{{ apt_sources_list }}'
+    dest: /etc/apt/sources.list
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Update apt cache
+
+- name: Create sources.list.d directory
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Remove sources.list.d files
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/{{ item }}
+    state: absent
+  notify: Update apt cache
+  loop: '{{ apt_sources_remove }}'
+
+- name: Update sources.list.d files
+  ansible.builtin.copy:
+    content: '{{ item.value }}'
+    dest: /etc/apt/sources.list.d/{{ item.key }}.sources
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Update apt cache
+  loop: '{{ apt_sources_files | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+
+- name: Force all notified handlers to run at this point
+  ansible.builtin.meta: flush_handlers
+...

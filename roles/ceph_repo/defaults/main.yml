@@ -1,0 +1,8 @@
+---
+ceph_repo_mirror: https://mirror.yandex.ru/mirrors/ceph
+ceph_repo_url: '{{ ceph_repo_mirror }}/debian-tentacle'
+ceph_repo_signing_key: '{{ ceph_repo_mirror }}/keys/release.asc'
+ceph_repo_signing_key_path: /etc/apt/keyrings/ceph.asc
+ceph_repo_signing_key_checksum: >-
+  sha256:8d4133aef8e80e479a810f532b3d52aac9e713cd07f163a87daf1db40a0d28b2
+...

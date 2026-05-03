@@ -1,0 +1,36 @@
+---
+- name: Update ceph hosts spec
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.copy:
+    content: '{{ ceph_hosts_spec }}'
+    dest: '{{ ceph_hosts_spec_file }}'
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Apply ceph hosts spec
+
+- name: Get current ceph cluster spec
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.shell: >-
+    cephadm shell
+    --
+    ceph orch ls --export
+    > {{ ceph_cluster_spec_file | ansible.builtin.quote }}
+  changed_when: false
+
+- name: Update ceph cluster spec
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.copy:
+    content: '{{ ceph_cluster_spec }}'
+    dest: '{{ ceph_cluster_spec_file }}'
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Apply ceph cluster spec
+
+- name: Force all notified handlers to run at this point
+  ansible.builtin.meta: flush_handlers
+...

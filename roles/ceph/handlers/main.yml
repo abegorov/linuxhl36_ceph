@@ -1,0 +1,25 @@
+---
+- name: Apply ceph hosts spec
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm shell
+    --mount {{ ceph_hosts_spec_file | ansible.builtin.quote }}:{{
+     ceph_hosts_spec_file | ansible.builtin.quote }}
+    --
+    ceph orch apply
+    --in-file {{ ceph_hosts_spec_file | ansible.builtin.quote }}
+  changed_when: true
+
+- name: Apply ceph cluster spec
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm shell
+    --mount {{ ceph_cluster_spec_file | ansible.builtin.quote }}:{{
+     ceph_cluster_spec_file | ansible.builtin.quote }}
+    --
+    ceph orch apply
+    --in-file {{ ceph_cluster_spec_file | ansible.builtin.quote }}
+  changed_when: true
+...

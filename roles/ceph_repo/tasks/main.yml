@@ -1,0 +1,31 @@
+---
+- name: Gather distribution facts
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - '!min'
+      - 'distribution'
+  tags: [ceph_repo]
+
+- name: Download ceph repository key
+  ansible.builtin.get_url:
+    url: '{{ ceph_repo_signing_key }}'
+    dest: '{{ ceph_repo_signing_key_path }}'
+    checksum: '{{ ceph_repo_signing_key_checksum }}'
+    owner: root
+    group: root
+    mode: '0644'
+  tags: [ceph_repo]
+
+- name: Add ceph repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb
+      [arch=amd64 signed-by={{ ceph_repo_signing_key_path }}]
+      {{ ceph_repo_url }}
+      {{ ansible_facts.distribution_release }}
+      main
+    filename: ceph
+    state: present
+  tags: [ceph_repo]
+...

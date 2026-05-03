@@ -1,0 +1,4 @@
+---
+dependencies:
+  - role: ceph_repo
+...

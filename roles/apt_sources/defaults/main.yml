@@ -1,0 +1,29 @@
+---
+apt_sources_list: |
+  # Ubuntu sources have moved to the /etc/apt/sources.list.d/ubuntu.sources
+  # file, which uses the deb822 format. Use deb822-formatted .sources files
+  # to manage package sources in the /etc/apt/sources.list.d/ directory.
+  # See the sources.list(5) manual page for details.
+
+apt_sources_remove: []
+apt_sources_files: '{{ apt_sources_default |
+  ansible.builtin.combine(apt_sources_override) }}'
+
+apt_sources_default:
+  ubuntu: |
+    Types: deb
+    URIs: http://mirror.yandex.ru/ubuntu/
+    Suites: {{ ansible_facts.distribution_release }} {{
+      ansible_facts.distribution_release }}-updates {{
+      ansible_facts.distribution_release }}-backports
+    Components: main universe restricted multiverse
+    Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+    Types: deb
+    URIs: http://mirror.yandex.ru/ubuntu/
+    Suites: {{ ansible_facts.distribution_release }}-security
+    Components: main universe restricted multiverse
+    Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+apt_sources_override: {}
+...

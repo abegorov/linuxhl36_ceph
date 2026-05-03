@@ -1,0 +1,69 @@
+---
+- name: Install ceph required packages
+  ansible.builtin.apt:
+    name:
+      - ceph-common
+      - cephadm
+      - podman
+      - lvm2
+    update_cache: true
+    cache_valid_time: 3600
+    state: present
+  retries: 10
+  delay: 10
+
+- name: Create ceph admin group
+  ansible.builtin.group:
+    name: ceph-admin
+    state: present
+
+- name: Create ceph admin user
+  ansible.builtin.user:
+    name: ceph-admin
+    comment: Ceph administration ssh user
+    create_home: true
+    group: ceph-admin
+    home: /home/ceph-admin
+    password: '!'
+    shell: /bin/bash
+    update_password: on_create
+    state: present
+
+- name: Configure passwordless sudo for ceph admin
+  ansible.builtin.copy:
+    content: |
+      ceph-admin ALL=(ALL) NOPASSWD:ALL
+    dest: /etc/sudoers.d/ceph-admin
+    owner: root
+    group: root
+    mode: '0440'
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Bootstrap ceph cluster
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm bootstrap
+    --ssh-user ceph-admin
+    --mon-ip {{ ceph_bootstrap_mon_ip | ansible.builtin.quote }}
+    --initial-dashboard-user {{ ceph_dashboard_user | ansible.builtin.quote }}
+    --initial-dashboard-password
+    {{ ceph_dashboard_password | ansible.builtin.quote }}
+    {{ ceph_bootstrap_args }}
+  args:
+    creates: /etc/ceph/ceph.pub
+
+- name: Fetch ceph ssh public key
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.fetch:
+    src: /etc/ceph/ceph.pub
+    dest: '{{ ceph_ssh_public_key }}'
+    flat: true
+
+- name: Update ceph admin authorized keys
+  ansible.posix.authorized_key:
+    user: ceph-admin
+    key: '{{ lookup("ansible.builtin.file", ceph_ssh_public_key) }}'
+    state: present
+...

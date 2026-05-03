@@ -1,0 +1,76 @@
+---
+ceph_bootstrap_host: '{{ groups["mon"] | first }}'
+ceph_bootstrap_mon_ip: '{{ hostvars[ceph_bootstrap_host].ip_address }}'
+ceph_bootstrap_args: --dashboard-password-noupdate --skip-monitoring-stack
+ceph_dashboard_user: admin
+ceph_dashboard_password: '{{ lookup("ansible.builtin.password",
+  "secrets/ceph_dashboard_password.txt", length=26) }}'
+ceph_ssh_public_key: secrets/ceph.pub
+
+ceph_hosts_spec_file: /etc/ceph/hosts-spec.yml
+ceph_cluster_spec_file: /etc/ceph/cluster-spec.yml
+
+ceph_hosts: '{{ groups["mds"] + groups["mon"] }}'
+ceph_host_labels:
+  - mon
+  - mgr
+ceph_host_location:
+  root: default
+
+ceph_hosts_spec: |
+  {% for host in ceph_hosts %}
+  {% set hvar = hostvars[host] %}
+  service_type: host
+  hostname: {{ hvar.ceph_host_name | default(host) }}
+  addr: {{ hvar.ceph_host_address | default(hvar.ip_address) }}
+  labels:
+  {% for label in hvar.ceph_host_labels | default(ceph_host_labels) %}
+  - {{ label }}
+  {% endfor %}
+  location:
+  {% set location = hvar.ceph_host_location | default(ceph_host_location) %}
+  {% for key, value in location.items() %}
+    {{ key }}: {{ value }}
+  {% endfor %}
+  ---
+  {% endfor %}
+
+ceph_cluster_spec: |
+  service_type: crash
+  service_name: crash
+  placement:
+    host_pattern: '*'
+  ---
+  service_type: mds
+  service_id: cephfs
+  service_name: mds.cephfs
+  placement:
+    label: mds
+  ---
+  service_type: mgr
+  service_name: mgr
+  placement:
+    label: mgr
+  ---
+  service_type: mon
+  service_name: mon
+  placement:
+    label: mon
+  ---
+  {% for host in groups['mds'] + groups['mon'] %}
+  {% set hvar = hostvars[host] %}
+  {% if hvar.ceph_host_osd_spec is defined %}
+  service_type: osd
+  service_id: {{ host | replace('-', '_') }}
+  service_name: osd.{{ host | replace('-', '_') }}
+  placement:
+    hosts:
+    - {{ host }}
+  spec:
+    {{ hvar.ceph_host_osd_spec | indent(2) -}}
+  {% endif %}
+  {% if not loop.last %}
+  ---
+  {% endif %}
+  {% endfor %}
+...

@@ -1,0 +1,9 @@
+---
+ceph_host_labels:
+  - mds
+  - mon
+
+ceph_host_location:
+  root: default
+  rack: rack{{ groups["mds"].index(inventory_hostname) + 1 }}
+...

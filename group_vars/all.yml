@@ -1,0 +1,12 @@
+---
+ansible_python_interpreter: /usr/bin/python3
+debug: false
+
+ceph_host_osd_spec: |
+  config:
+    osd_memory_target: '1073741824'
+  data_devices:
+    all: true
+  filter_logic: AND
+  objectstore: bluestore
+...

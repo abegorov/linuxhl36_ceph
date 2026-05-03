@@ -1,0 +1,17 @@
+---
+- name: Common provision
+  hosts: all
+  become: true
+  gather_facts: false
+  roles:
+    - apt_sources
+    - chrony
+    - ceph_common
+
+- name: Ceph provision
+  hosts: [mds, mon]
+  become: true
+  gather_facts: false
+  roles:
+    - ceph
+...

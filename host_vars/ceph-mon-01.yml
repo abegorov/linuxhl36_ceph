@@ -1,0 +1,15 @@
+---
+ceph_host_labels:
+  - _admin
+  - mon
+  - mgr
+
+ceph_host_osd_spec: |
+  config:
+    osd_memory_target: '1073741824'
+  data_devices:
+    all: true
+    limit: 1
+  filter_logic: AND
+  objectstore: bluestore
+...

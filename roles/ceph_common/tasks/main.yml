@@ -1,0 +1,11 @@
+---
+- name: Install ceph-common package
+  ansible.builtin.apt:
+    name: ceph-common
+    update_cache: true
+    cache_valid_time: 3600
+    state: present
+  retries: 10
+  delay: 10
+  tags: ceph_common
+...
