@@ -1,0 +1,66 @@
+---
+- name: List current crush rules
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: cephadm shell -- ceph osd crush rule ls
+  changed_when: false
+  register: _ceph_crush_rule_list
+
+- name: Create crush rule
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm shell
+    --
+    ceph osd crush rule create-replicated {{ item.key }} {{ item.value }}
+  changed_when: true
+  loop: '{{ ceph_crush_rules | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+  when: item.key not in _ceph_crush_rule_list.stdout_lines
+
+- name: List current ceph pools
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: cephadm shell -- ceph osd pool ls
+  changed_when: false
+  register: _ceph_pool_list
+
+- name: Create ceph pool
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm shell
+    --
+    ceph osd pool create {{ item.key }} {{ item.value }}
+  changed_when: true
+  loop: '{{ ceph_pools | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+  when: item.key not in _ceph_pool_list.stdout_lines
+
+- name: List current ceph filesystems
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: cephadm shell -- ceph fs ls --format json
+  changed_when: false
+  register: _ceph_filesystems_list
+
+- name: Create ceph filesystems
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm shell
+    --
+    ceph fs new {{ item.key }} {{ item.value }}
+  changed_when: true
+  loop: '{{ ceph_filesystems | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+  when: item.key not in _ceph_filesystems_list.stdout | from_json |
+    map(attribute='name')
+
+- name: Init rbd pools
+  ansible.builtin.include_tasks: rbd.yml
+  loop: '{{ ceph_rbd_init }}'
+...

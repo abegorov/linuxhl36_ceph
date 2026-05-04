@@ -17,6 +17,11 @@ ceph_host_labels:
 ceph_host_location:
   root: default
 
+ceph_crush_rules: {}
+ceph_pools: {}
+ceph_filesystems: {}
+ceph_rbd_init: []
+
 ceph_hosts_spec: |
   {% for host in ceph_hosts %}
   {% set hvar = hostvars[host] %}

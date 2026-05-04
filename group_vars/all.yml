@@ -9,4 +9,17 @@ ceph_host_osd_spec: |
     all: true
   filter_logic: AND
   objectstore: bluestore
+
+ceph_crush_rules:
+  rack_rule: default rack
+
+ceph_pools:
+  rbd: '256 256 replicated rack_rule'
+  cephfs_data: '64 64 replicated rack_rule'
+  cephfs_metadata: '16 16 replicated rack_rule'
+
+ceph_filesystems:
+  cephfs: cephfs_metadata cephfs_data
+
+ceph_rbd_init: [rbd]
 ...

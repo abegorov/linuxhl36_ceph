@@ -6,4 +6,8 @@
 - name: Import config tasks
   ansible.builtin.import_tasks: config.yml
   tags: [ceph, ceph_config]
+
+- name: Import pool tasks
+  ansible.builtin.import_tasks: pool.yml
+  tags: [ceph, ceph_pool]
 ...

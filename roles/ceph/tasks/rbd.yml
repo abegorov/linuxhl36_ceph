@@ -1,0 +1,21 @@
+---
+- name: Get pool application
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm shell
+    --
+    ceph osd pool application get {{ item }}
+  changed_when: false
+  register: _ceph_pool_application
+
+- name: Init rbd pool {{ item }}
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm shell
+    --
+    rbd pool init {{ item }}
+  changed_when: true
+  when: _ceph_pool_application.stdout | from_json | length == 0
+...
