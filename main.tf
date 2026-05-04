@@ -139,6 +139,42 @@ resource "yandex_compute_instance" "mon" {
   }
   metadata = local.yandex_compute_instance_metadata
 }
+resource "yandex_lb_target_group" "mgr" {
+  name      = "${var.project}-mgr"
+  target {
+    subnet_id = yandex_vpc_subnet.default.id
+    address = yandex_compute_instance.mon.0.network_interface.0.ip_address
+  }
+  target {
+    subnet_id = yandex_vpc_subnet.default.id
+    address = yandex_compute_instance.mon.1.network_interface.0.ip_address
+  }
+}
+resource "yandex_lb_network_load_balancer" "mgr" {
+  name = "${var.project}-mgr"
+  listener {
+    name = "${var.project}-mgr"
+    port = 443
+    target_port = 8443
+    external_address_spec {
+      ip_version = "ipv4"
+    }
+  }
+  attached_target_group {
+    target_group_id = yandex_lb_target_group.mgr.id
+    healthcheck {
+      name = "mgr"
+      healthy_threshold = 2
+      unhealthy_threshold = 2
+      interval = 2
+      timeout = 1
+      http_options {
+        port = 8443
+        path = "/"
+      }
+    }
+  }
+}
 resource "local_file" "inventory" {
   filename = "${path.root}/inventory.yml"
   content = templatefile("${path.module}/inventory.tftpl", {
