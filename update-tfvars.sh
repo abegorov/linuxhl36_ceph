@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-PROJECT=vault
+PROJECT=ceph
 ZONE=ru-central1-d
 
 TOKEN=$(yc iam create-token)
