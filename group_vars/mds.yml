@@ -1,7 +1,6 @@
 ---
 ceph_host_labels:
   - mds
-  - mon
 
 ceph_host_location:
   root: default
