@@ -1,0 +1,10 @@
+---
+ceph_client_auth_keys: [user]
+ceph_client_rbd_user: user
+ceph_client_cephfs_user: user
+
+ceph_client_rbd_volumes:
+  vol1: --size 1G
+  vol2: --size 1G
+  vol3: --size 1G
+...

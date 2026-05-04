@@ -5,6 +5,9 @@ ceph_bootstrap_args: --dashboard-password-noupdate --skip-monitoring-stack
 ceph_dashboard_user: admin
 ceph_dashboard_password: '{{ lookup("ansible.builtin.password",
   "secrets/ceph_dashboard_password.txt", length=26) }}'
+
+ceph_authkey_dir: secrets
+ceph_conf_file: secrets/ceph.conf
 ceph_ssh_public_key: secrets/ceph.pub
 
 ceph_hosts_spec_file: /etc/ceph/hosts-spec.yml
@@ -17,10 +20,15 @@ ceph_host_labels:
 ceph_host_location:
   root: default
 
+ceph_osd_wait: 1
+ceph_osd_wait_retries: 30
+ceph_osd_wait_delay: 10
+
 ceph_crush_rules: {}
 ceph_pools: {}
 ceph_filesystems: {}
 ceph_rbd_init: []
+ceph_auth: {}
 
 ceph_hosts_spec: |
   {% for host in ceph_hosts %}

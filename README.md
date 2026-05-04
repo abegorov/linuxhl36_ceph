@@ -58,8 +58,8 @@
 - **ceph-mon-01** - ceph mon, mgr, osd;
 - **ceph-mon-02** - ceph mon, mgr, osd;
 - **ceph-mon-03** - ceph mon, osd;
-- **ceph-mds-01** - ceph mon, mds, osd;
-- **ceph-mds-02** - ceph mon, mds, osd.
+- **ceph-mds-01** - ceph mds, osd;
+- **ceph-mds-02** - ceph mds, osd.
 
 В независимости от того, как созданы виртуальные машины, для их настройки запускается **Ansible Playbook** [provision.yml](provision.yml) который последовательно запускает следующие роли:
 
@@ -67,11 +67,13 @@
 - **chrony** - устанавливает **chrony** для синхронизации времени между узлами.
 - **ceph_repo** - настраивает зеркало для репозитория **download.ceph.com** для последующей установки **ceph**.
 - **ceph_common** - устанавливает пакет **ceph_common** на все узлы.
-- **ceph** - выполняет **cephadm bootstrap**, создаёт пользователя **ceph-admin**, настраивает для него авторизованные ключи ssh и выполняет **ceph orch apply** для сгененированных шаблонов.
+- **ceph** - выполняет **cephadm bootstrap**, создаёт пользователя **ceph-admin**, настраивает для него авторизованные ключи ssh и выполняет **ceph orch apply** для сгененированных шаблонов, настраивает доступ для клиентов.
+- **ceph_client** - выполняет настройку на клиенте (аутентификацию, подключение rbd томов и cephfs).
 
 Данные роли настраиваются с помощью переменных, определённых в следующих файлах:
 
 - [group_vars/all.yml](group_vars/all.yml) - общие переменные для всех узлов, а также переменная **ceph_host_osd_spec**, которая позволяет использовать все свободные диски на узлах **mon** и **mgs**, а также переменные **ceph_crush_rules**, **ceph_pools**, **ceph_filesystems** и **ceph_rbd_init**;
+- [group_vars/cli.yml](group_vars/cli.yml) - задаёт настройки для клиентов (имя пользователя) и подключаемые тома;
 - [group_vars/mds.yml](group_vars/mds.yml) - задаёт метку **mds** для соответствующих узлов и стойку в **ceph_host_location**;
 - [group_vars/mon.yml](group_vars/mds.yml) - задаёт метку **mon** для соответствующих узлов и стойку в **ceph_host_location**;
 - [host_vars/ceph-mon-01.yml](host_vars/ceph-mon-01.yml) - для узла **ceph-mon-01** добавляет метку **mgr** и использует только один из доступных дисков под osd;

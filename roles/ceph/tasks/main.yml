@@ -10,4 +10,8 @@
 - name: Import pool tasks
   ansible.builtin.import_tasks: pool.yml
   tags: [ceph, ceph_pool]
+
+- name: Import auth tasks
+  ansible.builtin.import_tasks: auth.yml
+  tags: [ceph, ceph_auth]
 ...

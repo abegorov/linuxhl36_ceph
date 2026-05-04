@@ -1,4 +1,14 @@
 ---
+- name: Wait for osd creation
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: cephadm shell -- ceph osd ls
+  changed_when: false
+  register: _ceph_osd_list
+  until: _ceph_osd_list.stdout_lines | length >= ceph_osd_wait
+  retries: '{{ ceph_osd_wait_retries }}'
+  delay: '{{ ceph_osd_wait_delay }}'
+
 - name: List current crush rules
   delegate_to: '{{ ceph_bootstrap_host }}'
   run_once: true

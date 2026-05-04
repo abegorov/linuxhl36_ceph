@@ -1,0 +1,18 @@
+---
+- name: Update ceph configuration file
+  ansible.builtin.copy:
+    src: '{{ ceph_client_conf_file }}'
+    dest: /etc/ceph/ceph.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update ceph client auth keys
+  ansible.builtin.copy:
+    src: '{{ ceph_client_authkey_dir }}/ceph.client.{{ item }}.keyring'
+    dest: /etc/ceph/ceph.client.{{ item }}.keyring
+    owner: root
+    group: root
+    mode: '0600'
+  loop: '{{ ceph_client_auth_keys }}'
+...

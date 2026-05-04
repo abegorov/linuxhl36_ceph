@@ -8,10 +8,17 @@
     - chrony
     - ceph_common
 
-- name: Ceph provision
+- name: Ceph cluster provision
   hosts: [mds, mon]
   become: true
   gather_facts: false
   roles:
     - ceph
+
+- name: Ceph client provision
+  hosts: [cli]
+  become: true
+  gather_facts: false
+  roles:
+    - ceph_client
 ...

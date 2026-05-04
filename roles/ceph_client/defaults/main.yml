@@ -1,0 +1,11 @@
+---
+ceph_client_conf_file: secrets/ceph.conf
+ceph_client_authkey_dir: secrets
+ceph_client_auth_keys: []
+ceph_client_rbd_user: admin
+ceph_client_cephfs_user: admin
+
+ceph_client_rbd_pool: rbd
+ceph_client_rbd_volumes: {}
+ceph_client_cephfs_path: /mnt/cephfs
+...

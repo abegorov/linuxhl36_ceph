@@ -1,0 +1,13 @@
+---
+- name: Import auth tasks
+  ansible.builtin.import_tasks: auth.yml
+  tags: [ceph_client, ceph_client_auth]
+
+- name: Import rbd tasks
+  ansible.builtin.import_tasks: rbd.yml
+  tags: [ceph_client, ceph_client_rbd]
+
+- name: Import fs tasks
+  ansible.builtin.import_tasks: fs.yml
+  tags: [ceph_client, ceph_client_fs]
+...

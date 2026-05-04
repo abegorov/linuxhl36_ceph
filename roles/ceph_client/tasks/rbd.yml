@@ -1,0 +1,34 @@
+---
+- name: List ceph rbd volumes
+  ansible.builtin.command: >-
+    rbd list
+    {{ ceph_client_rbd_pool | ansible.builtin.quote }}
+    --id {{ ceph_client_rbd_user | ansible.builtin.quote }}
+  changed_when: false
+  register: _ceph_client_rbd_volumes
+
+- name: Create ceph rbd volumes
+  vars:
+    spec: '{{ ceph_client_rbd_pool }}/{{ item.key }}'
+  ansible.builtin.command: >-
+    rbd create
+    {{ spec | ansible.builtin.quote }}
+    {{ item.value }}
+    --id {{ ceph_client_rbd_user | ansible.builtin.quote }}
+  changed_when: true
+  when: item.key not in _ceph_client_rbd_volumes.stdout_lines
+  loop: '{{ ceph_client_rbd_volumes | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+
+- name: Map ceph rbd volumes
+  vars:
+    spec: '{{ ceph_client_rbd_pool }}/{{ item }}'
+  ansible.builtin.command: >-
+    rbd map
+    {{ spec | ansible.builtin.quote }}
+    --id {{ ceph_client_rbd_user | ansible.builtin.quote }}
+  args:
+    creates: /dev/rbd/{{ spec }}
+  loop: '{{ ceph_client_rbd_volumes.keys() }}'
+...

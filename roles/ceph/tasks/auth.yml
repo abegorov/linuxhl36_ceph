@@ -1,0 +1,42 @@
+---
+- name: Create ceph auth key
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.command: >-
+    cephadm shell
+    --mount /etc/ceph:/etc/ceph
+    --
+    ceph auth get-or-create
+    client.{{ item.key | ansible.builtin.quote }}
+    {{ item.value }}
+    --out-file
+    /etc/ceph/ceph.client.{{ item.key | ansible.builtin.quote }}.keyring
+  args:
+    creates: /etc/ceph/ceph.client.{{ item.key }}.keyring
+  loop: '{{ ceph_auth | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+
+- name: Update key permission
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.file:
+    path: /etc/ceph/ceph.client.{{ item.key }}.keyring
+    owner: root
+    group: root
+    mode: '0600'
+  loop: '{{ ceph_auth | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+
+- name: Fetch ceph auth keys
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.fetch:
+    src: /etc/ceph/ceph.client.{{ item.key }}.keyring
+    dest: '{{ ceph_authkey_dir }}/ceph.client.{{ item.key }}.keyring'
+    flat: true
+  loop: '{{ ceph_auth | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+...

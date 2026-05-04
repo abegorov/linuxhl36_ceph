@@ -10,6 +10,8 @@ ceph_host_osd_spec: |
   filter_logic: AND
   objectstore: bluestore
 
+ceph_osd_wait: 8
+
 ceph_crush_rules:
   rack_rule: default rack
 
@@ -22,4 +24,9 @@ ceph_filesystems:
   cephfs: cephfs_metadata cephfs_data
 
 ceph_rbd_init: [rbd]
+
+ceph_auth:
+  user: mon 'allow r'
+    osd 'profile rbd pool=rbd, allow rw pool=cephfs_data'
+    mds 'allow rw path=/'
 ...

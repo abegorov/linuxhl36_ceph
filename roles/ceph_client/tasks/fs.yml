@@ -1,0 +1,10 @@
+---
+- name: Mount ceph filesystem
+  ansible.posix.mount:
+    boot: false
+    fstype: ceph
+    opts: name={{ ceph_client_cephfs_user | ansible.builtin.quote }}
+    path: '{{ ceph_client_cephfs_path }}'
+    src: ':/'
+    state: mounted
+...
