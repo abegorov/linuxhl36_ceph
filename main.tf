@@ -50,12 +50,12 @@ resource "yandex_compute_instance" "cli" {
   metadata = local.yandex_compute_instance_metadata
 }
 resource "yandex_compute_disk" "mds_disk1" {
-  count = local.yandex_compute_instance_mon_count
+  count = local.yandex_compute_instance_mds_count
   size  = 10
   type  = "network-hdd"
 }
 resource "yandex_compute_disk" "mds_disk2" {
-  count = local.yandex_compute_instance_mon_count
+  count = local.yandex_compute_instance_mds_count
   size  = 10
   type  = "network-hdd"
 }
