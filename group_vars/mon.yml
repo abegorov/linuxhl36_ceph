@@ -18,6 +18,6 @@ haproxy_config_append:
     - balance first
     - |
       {% for server in groups["mon"] %}
-      server {{ server }} {{ hostvars[server].ip_address }}:8443 check-ssl verify none
+      server {{ server }} {{ hostvars[server].ip_address }}:8443 check check-ssl verify none
       {% endfor %}
 ...
