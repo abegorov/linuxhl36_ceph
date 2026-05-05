@@ -16,9 +16,9 @@ ceph_crush_rules:
   rack_rule: default rack
 
 ceph_pools:
-  rbd: '256 256 replicated rack_rule'
-  cephfs_data: '64 64 replicated rack_rule'
-  cephfs_metadata: '16 16 replicated rack_rule'
+  rbd: '256 256 replicated rack_rule --autoscale-mode=off'
+  cephfs_data: '64 64 replicated rack_rule --autoscale-mode=off'
+  cephfs_metadata: '16 16 replicated rack_rule --autoscale-mode=off'
 
 ceph_filesystems:
   cephfs: cephfs_metadata cephfs_data
