@@ -1,0 +1,13 @@
+---
+- name: Import install tasks
+  ansible.builtin.import_tasks: install.yml
+  tags: [haproxy, haproxy_install]
+
+- name: Configure haproxy
+  ansible.builtin.import_tasks: config.yml
+  tags: [haproxy, haproxy_config]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [haproxy, haproxy_config]
+...

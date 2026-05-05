@@ -141,13 +141,12 @@ resource "yandex_compute_instance" "mon" {
 }
 resource "yandex_lb_target_group" "mgr" {
   name      = "${var.project}-mgr"
-  target {
-    subnet_id = yandex_vpc_subnet.default.id
-    address = yandex_compute_instance.mon.0.network_interface.0.ip_address
-  }
-  target {
-    subnet_id = yandex_vpc_subnet.default.id
-    address = yandex_compute_instance.mon.1.network_interface.0.ip_address
+  dynamic "target" {
+    for_each = yandex_compute_instance.mon
+    content {
+      subnet_id = yandex_vpc_subnet.default.id
+      address = target.value.network_interface.0.ip_address
+    }
   }
 }
 resource "yandex_lb_network_load_balancer" "mgr" {
@@ -155,7 +154,7 @@ resource "yandex_lb_network_load_balancer" "mgr" {
   listener {
     name = "${var.project}-mgr"
     port = 443
-    target_port = 8443
+    target_port = 443
     external_address_spec {
       ip_version = "ipv4"
     }
@@ -168,9 +167,8 @@ resource "yandex_lb_network_load_balancer" "mgr" {
       unhealthy_threshold = 2
       interval = 2
       timeout = 1
-      http_options {
-        port = 8443
-        path = "/"
+      tcp_options {
+        port = 443
       }
     }
   }

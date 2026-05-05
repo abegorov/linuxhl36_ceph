@@ -1,0 +1,10 @@
+---
+- name: Install haproxy
+  ansible.builtin.apt:
+    name: haproxy
+    update_cache: true
+    cache_valid_time: 3600
+    state: present
+  retries: 10
+  delay: 10
+...

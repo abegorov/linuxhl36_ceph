@@ -15,6 +15,13 @@
   roles:
     - ceph
 
+- name: Haproxy provision
+  hosts: [mon]
+  become: true
+  gather_facts: false
+  roles:
+    - haproxy
+
 - name: Ceph client provision
   hosts: [cli]
   become: true

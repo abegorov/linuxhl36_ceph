@@ -6,4 +6,18 @@ ceph_host_labels:
 ceph_host_location:
   root: default
   rack: rack{{ groups["mon"].index(inventory_hostname) + 1 }}
+
+haproxy_config_append:
+  defaults:
+    -
+    - default-server inter 100 fall 3 rise 2 on-marked-down shutdown-sessions
+  listen https:
+    - bind *:443 transparent
+    - option httpchk GET /
+    - http-check expect status 200
+    - balance first
+    - |
+      {% for server in groups["mon"] %}
+      server {{ server }} {{ hostvars[server].ip_address }}:8443 check-ssl verify none
+      {% endfor %}
 ...

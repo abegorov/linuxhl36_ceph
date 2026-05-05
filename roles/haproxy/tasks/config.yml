@@ -1,0 +1,18 @@
+---
+- name: Configure haproxy
+  ansible.builtin.template:
+    src: haproxy.cfg
+    dest: /etc/haproxy/haproxy.cfg
+    lstrip_blocks: true
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload haproxy service
+
+- name: Enable and start haproxy service
+  ansible.builtin.systemd_service:
+    name: haproxy.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...
