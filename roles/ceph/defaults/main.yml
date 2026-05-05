@@ -22,7 +22,7 @@ ceph_host_location:
 
 ceph_osd_wait: 1
 ceph_osd_wait_retries: 30
-ceph_osd_wait_delay: 10
+ceph_osd_wait_delay: 30
 
 ceph_crush_rules: {}
 ceph_pools: {}
