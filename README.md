@@ -908,8 +908,8 @@ rbd image 'vol1':
 
 ```text
 root@ceph-cli-01:~# findmnt -t ceph
-TARGET      SOURCE             FSTYPE OPTIONS
-/mnt/cephfs 10.130.0.41:6789:/ ceph   rw,relatime,name=user,secret=<hidden>,fsid=094cf1d8-482f-11f1-ae30-d00d70944f6e,acl
+TARGET      SOURCE                                               FSTYPE OPTIONS
+/mnt/cephfs 10.130.0.41:6789,10.130.0.42:6789,10.130.0.43:6789:/ ceph   rw,relatime,name=user,secret=<hidden>,fsid=2a882841-48a3-11f1-838c-d00d99b60350,acl
 
 root@ceph-cli-01:~# stat -f /mnt/cephfs
   File: "/mnt/cephfs"
@@ -956,3 +956,1292 @@ tmpfs              tmpfs  197M  8.0K  197M   1% /run/user/1000
 ![Ceph users](images/users.png)
 
 ![Manager modules](images/modules.png)
+
+## Аварийные сценарии
+
+### Сгенерировать split-brain
+
+Для генерации split-brain заблокируем входящий трафик с мониторов на **ceph-mon-02** и **ceph-mon-03**:
+
+```shell
+nft add table inet filter
+nft add chain inet filter input '{ type filter hook input priority 0; }'
+nft add rule inet filter input ip saddr 10.130.0.40/30 drop
+```
+
+Проверим состояние кластера. Любые утилиты администрирования не работают, информацию о состоянии можно посмотреть только непосредственно с мониторов:
+
+```text
+root@ceph-mon-01:~# cephadm enter --name mon.ceph-mon-01
+Inferring fsid 2a882841-48a3-11f1-838c-d00d99b60350
+[ceph: root@ceph-mon-01 /]# ceph --admin-daemon /var/run/ceph/ceph-mon.ceph-mon-01.asok mon_status
+{
+    "name": "ceph-mon-01",
+    "rank": 0,
+    "state": "probing",
+    "election_epoch": 18,
+    "uptime": 3078312,
+    "quorum": [],
+    "features": {
+        "required_con": "2451647607914708996",
+        "required_mon": [
+            "kraken",
+            "luminous",
+            "mimic",
+            "osdmap-prune",
+            "nautilus",
+            "octopus",
+            "pacific",
+            "elector-pinging",
+            "quincy",
+            "reef",
+            "squid",
+            "tentacle"
+        ],
+        "quorum_con": "4541880224203014143",
+        "quorum_mon": [
+            "kraken",
+            "luminous",
+            "mimic",
+            "osdmap-prune",
+            "nautilus",
+            "octopus",
+            "pacific",
+            "elector-pinging",
+            "quincy",
+            "reef",
+            "squid",
+            "tentacle"
+        ]
+    },
+    "outside_quorum": [
+        "ceph-mon-01"
+    ],
+    "extra_probe_peers": [
+        {
+            "addrvec": [
+                {
+                    "type": "v2",
+                    "addr": "10.130.0.42:3300",
+                    "nonce": 0
+                },
+                {
+                    "type": "v1",
+                    "addr": "10.130.0.42:6789",
+                    "nonce": 0
+                }
+            ]
+        },
+        {
+            "addrvec": [
+                {
+                    "type": "v2",
+                    "addr": "10.130.0.43:3300",
+                    "nonce": 0
+                },
+                {
+                    "type": "v1",
+                    "addr": "10.130.0.43:6789",
+                    "nonce": 0
+                }
+            ]
+        }
+    ],
+    "sync_provider": [],
+    "monmap": {
+        "epoch": 3,
+        "fsid": "2a882841-48a3-11f1-838c-d00d99b60350",
+        "modified": "2026-05-05T17:05:24.316864Z",
+        "created": "2026-05-05T16:57:20.349535Z",
+        "min_mon_release": 20,
+        "min_mon_release_name": "tentacle",
+        "election_strategy": 1,
+        "disallowed_leaders": "",
+        "stretch_mode": false,
+        "tiebreaker_mon": "",
+        "removed_ranks": "",
+        "features": {
+            "persistent": [
+                "kraken",
+                "luminous",
+                "mimic",
+                "osdmap-prune",
+                "nautilus",
+                "octopus",
+                "pacific",
+                "elector-pinging",
+                "quincy",
+                "reef",
+                "squid",
+                "tentacle"
+            ],
+            "optional": []
+        },
+        "mons": [
+            {
+                "rank": 0,
+                "name": "ceph-mon-01",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.41:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.41:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.41:6789/0",
+                "public_addr": "10.130.0.41:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            },
+            {
+                "rank": 1,
+                "name": "ceph-mon-03",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.43:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.43:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.43:6789/0",
+                "public_addr": "10.130.0.43:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            },
+            {
+                "rank": 2,
+                "name": "ceph-mon-02",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.42:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.42:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.42:6789/0",
+                "public_addr": "10.130.0.42:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            }
+        ]
+    },
+    "feature_map": {
+        "mon": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 1
+            }
+        ],
+        "osd": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 2
+            }
+        ],
+        "client": [
+            {
+                "features": "0x2f018fb87aa4aafe",
+                "release": "luminous",
+                "num": 1
+            },
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 6
+            }
+        ],
+        "mgr": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 1
+            }
+        ]
+    },
+    "stretch_mode": false
+}
+```
+
+Из-за ранее указанных правил файрволла монитор находится в неработающим состоянии `"state": "probing"`. Из-за этого кластер полностью недоступен. Тома и файловая система видны на клиенте, доступны для чтения, но недоступны для записи. Попытка записать что-то или простое обращение к `/mnt` приводит к зависанию процессов в состоянии **D**:
+
+```text
+root@ceph-cli-01:~# ps aux | grep ' [D]'
+root        5945  0.0  0.1   6948  3080 pts/1    D+   17:53   0:00 mkfs.ext4 /dev/rbd0
+root        6125  0.0  0.1   9292  3960 pts/3    D+   17:56   0:00 -bash
+root        6307  0.0  0.1   7016  2300 pts/5    D+   17:57   0:00 ls --color=auto /mnt
+```
+
+В выводе **dmesg** наблюдаются сообщения о недоступности mon:
+
+```text
+[Tue May  5 18:00:54 2026] libceph: mon0 (1)10.130.0.41:6789 socket closed (con state OPEN)
+[Tue May  5 18:00:54 2026] libceph: mon1 (2)10.130.0.43:3300 socket closed (con state OPEN)
+[Tue May  5 18:00:54 2026] libceph: mon2 (2)10.130.0.43:3300 session lost, hunting for new mon
+[Tue May  5 18:00:54 2026] libceph: mon0 (2)10.130.0.41:3300 session established
+[Tue May  5 18:00:59 2026] libceph: mon0 (2)10.130.0.41:3300 socket closed (con state OPEN)
+[Tue May  5 18:00:59 2026] libceph: mon0 (2)10.130.0.41:3300 session lost, hunting for new mon
+[Tue May  5 18:00:59 2026] libceph: mon1 (2)10.130.0.42:3300 session established
+[Tue May  5 18:01:00 2026] libceph: mon2 (2)10.130.0.42:3300 socket closed (con state OPEN)
+[Tue May  5 18:01:00 2026] libceph: mon1 (2)10.130.0.42:3300 session lost, hunting for new mon
+[Tue May  5 18:01:00 2026] libceph: mon0 (2)10.130.0.41:3300 session established
+```
+
+Исправим это, очистив правила файрволла на **ceph-mon-02** с помощью команды `nft flush ruleset`.
+
+В логе **dmesg** появляются сообщения о восстановлении:
+
+```text
+[Tue May  5 18:03:10 2026] libceph (2a882841-48a3-11f1-838c-d00d99b60350 e70): osd6 down
+[Tue May  5 18:03:10 2026] libceph (2a882841-48a3-11f1-838c-d00d99b60350 e70): osd7 down
+[Tue May  5 18:03:11 2026] rbd: rbd1: encountered watch error: -107
+[Tue May  5 18:03:11 2026] rbd: rbd0: encountered watch error: -107
+[Tue May  5 18:03:14 2026] ceph: [2a882841-48a3-11f1-838c-d00d99b60350 14451]: mds0 came back
+[Tue May  5 18:03:14 2026] ceph: [2a882841-48a3-11f1-838c-d00d99b60350 14451]: mds0 caps renewed
+[Tue May  5 18:03:24 2026] libceph: mon1 (1)10.130.0.42:6789 session established
+```
+
+После этого процессы возвращаются в нормальное состояние:
+
+```text
+root@ceph-cli-01:~# ps aux | grep ' [D]'
+```
+
+**ceph-mon-01** становится лидером (`"state": "leader"`):
+
+```text
+[ceph: root@ceph-mon-01 /]# ceph --admin-daemon /var/run/ceph/ceph-mon.ceph-mon-01.asok mon_status
+{
+    "name": "ceph-mon-01",
+    "rank": 0,
+    "state": "leader",
+    "election_epoch": 20,
+    "uptime": 4142499,
+    "quorum": [
+        0,
+        2
+    ],
+    "quorum_age": 205,
+    "features": {
+        "required_con": "2451647607914708996",
+        "required_mon": [
+            "kraken",
+            "luminous",
+            "mimic",
+            "osdmap-prune",
+            "nautilus",
+            "octopus",
+            "pacific",
+            "elector-pinging",
+            "quincy",
+            "reef",
+            "squid",
+            "tentacle"
+        ],
+        "quorum_con": "4541880224203014143",
+        "quorum_mon": [
+            "kraken",
+            "luminous",
+            "mimic",
+            "osdmap-prune",
+            "nautilus",
+            "octopus",
+            "pacific",
+            "elector-pinging",
+            "quincy",
+            "reef",
+            "squid",
+            "tentacle"
+        ]
+    },
+    "outside_quorum": [],
+    "extra_probe_peers": [
+        {
+            "addrvec": [
+                {
+                    "type": "v2",
+                    "addr": "10.130.0.42:3300",
+                    "nonce": 0
+                },
+                {
+                    "type": "v1",
+                    "addr": "10.130.0.42:6789",
+                    "nonce": 0
+                }
+            ]
+        },
+        {
+            "addrvec": [
+                {
+                    "type": "v2",
+                    "addr": "10.130.0.43:3300",
+                    "nonce": 0
+                },
+                {
+                    "type": "v1",
+                    "addr": "10.130.0.43:6789",
+                    "nonce": 0
+                }
+            ]
+        }
+    ],
+    "sync_provider": [],
+    "monmap": {
+        "epoch": 3,
+        "fsid": "2a882841-48a3-11f1-838c-d00d99b60350",
+        "modified": "2026-05-05T17:05:24.316864Z",
+        "created": "2026-05-05T16:57:20.349535Z",
+        "min_mon_release": 20,
+        "min_mon_release_name": "tentacle",
+        "election_strategy": 1,
+        "disallowed_leaders": "",
+        "stretch_mode": false,
+        "tiebreaker_mon": "",
+        "removed_ranks": "",
+        "features": {
+            "persistent": [
+                "kraken",
+                "luminous",
+                "mimic",
+                "osdmap-prune",
+                "nautilus",
+                "octopus",
+                "pacific",
+                "elector-pinging",
+                "quincy",
+                "reef",
+                "squid",
+                "tentacle"
+            ],
+            "optional": []
+        },
+        "mons": [
+            {
+                "rank": 0,
+                "name": "ceph-mon-01",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.41:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.41:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.41:6789/0",
+                "public_addr": "10.130.0.41:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            },
+            {
+                "rank": 1,
+                "name": "ceph-mon-03",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.43:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.43:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.43:6789/0",
+                "public_addr": "10.130.0.43:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            },
+            {
+                "rank": 2,
+                "name": "ceph-mon-02",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.42:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.42:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.42:6789/0",
+                "public_addr": "10.130.0.42:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            }
+        ]
+    },
+    "feature_map": {
+        "mon": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 1
+            }
+        ],
+        "osd": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 1
+            }
+        ],
+        "client": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 4
+            }
+        ],
+        "mgr": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 1
+            }
+        ]
+    },
+    "stretch_mode": false
+}
+```
+
+Для **ceph-mon-02** `"state": "peon"`:
+
+```text
+root@ceph-mon-02:~# cephadm enter --name mon.ceph-mon-02
+Inferring fsid 2a882841-48a3-11f1-838c-d00d99b60350
+[ceph: root@ceph-mon-02 /]# ceph --admin-daemon /var/run/ceph/ceph-mon.ceph-mon-02.asok mon_status
+{
+    "name": "ceph-mon-02",
+    "rank": 2,
+    "state": "peon",
+    "election_epoch": 20,
+    "uptime": 3799825,
+    "quorum": [
+        0,
+        2
+    ],
+    "quorum_age": 330,
+    "features": {
+        "required_con": "2451647607914708996",
+        "required_mon": [
+            "kraken",
+            "luminous",
+            "mimic",
+            "osdmap-prune",
+            "nautilus",
+            "octopus",
+            "pacific",
+            "elector-pinging",
+            "quincy",
+            "reef",
+            "squid",
+            "tentacle"
+        ],
+        "quorum_con": "4541880224203014143",
+        "quorum_mon": [
+            "kraken",
+            "luminous",
+            "mimic",
+            "osdmap-prune",
+            "nautilus",
+            "octopus",
+            "pacific",
+            "elector-pinging",
+            "quincy",
+            "reef",
+            "squid",
+            "tentacle"
+        ]
+    },
+    "outside_quorum": [],
+    "extra_probe_peers": [],
+    "sync_provider": [],
+    "monmap": {
+        "epoch": 3,
+        "fsid": "2a882841-48a3-11f1-838c-d00d99b60350",
+        "modified": "2026-05-05T17:05:24.316864Z",
+        "created": "2026-05-05T16:57:20.349535Z",
+        "min_mon_release": 20,
+        "min_mon_release_name": "tentacle",
+        "election_strategy": 1,
+        "disallowed_leaders": "",
+        "stretch_mode": false,
+        "tiebreaker_mon": "",
+        "removed_ranks": "",
+        "features": {
+            "persistent": [
+                "kraken",
+                "luminous",
+                "mimic",
+                "osdmap-prune",
+                "nautilus",
+                "octopus",
+                "pacific",
+                "elector-pinging",
+                "quincy",
+                "reef",
+                "squid",
+                "tentacle"
+            ],
+            "optional": []
+        },
+        "mons": [
+            {
+                "rank": 0,
+                "name": "ceph-mon-01",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.41:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.41:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.41:6789/0",
+                "public_addr": "10.130.0.41:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            },
+            {
+                "rank": 1,
+                "name": "ceph-mon-03",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.43:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.43:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.43:6789/0",
+                "public_addr": "10.130.0.43:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            },
+            {
+                "rank": 2,
+                "name": "ceph-mon-02",
+                "public_addrs": {
+                    "addrvec": [
+                        {
+                            "type": "v2",
+                            "addr": "10.130.0.42:3300",
+                            "nonce": 0
+                        },
+                        {
+                            "type": "v1",
+                            "addr": "10.130.0.42:6789",
+                            "nonce": 0
+                        }
+                    ]
+                },
+                "addr": "10.130.0.42:6789/0",
+                "public_addr": "10.130.0.42:6789/0",
+                "priority": 0,
+                "weight": 0,
+                "crush_location": "{}"
+            }
+        ]
+    },
+    "feature_map": {
+        "mon": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 1
+            }
+        ],
+        "mds": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 2
+            }
+        ],
+        "osd": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 5
+            }
+        ],
+        "client": [
+            {
+                "features": "0x2f018fb87aa4aafe",
+                "release": "luminous",
+                "num": 2
+            },
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 2
+            }
+        ],
+        "mgr": [
+            {
+                "features": "0x3f07fffffffdffff",
+                "release": "squid",
+                "num": 1
+            }
+        ]
+    },
+    "stretch_mode": false
+}
+```
+
+Также восстанавливается работа утилиты ceph.
+
+```text
+root@ceph-mon-01:~# ceph mon stat
+e3: 3 mons at {ceph-mon-01=[v2:10.130.0.41:3300/0,v1:10.130.0.41:6789/0],ceph-mon-02=[v2:10.130.0.42:3300/0,v1:10.130.0.42:6789/0],ceph-mon-03=[v2:10.130.0.43:3300/0,v1:10.130.0.43:6789/0]} removed_ranks: {} disallowed_leaders: {}, election epoch 20, leader 0 ceph-mon-01, quorum 0,2 ceph-mon-01,ceph-mon-02
+```
+
+После команды `nft flush ruleset` на **ceph-mon-03** поднимаются osd на этом узле:
+
+```text
+[Tue May  5 18:12:19 2026] libceph (2a882841-48a3-11f1-838c-d00d99b60350 e72): osd6 up
+[Tue May  5 18:12:19 2026] libceph (2a882841-48a3-11f1-838c-d00d99b60350 e72): osd7 up
+```
+
+## Сбой ноды с OSD
+
+Удалим узел **ceph-mon-03** и проверим состояние узлов:
+
+```text
+root@ceph-mon-01:~# ceph orch host ls
+HOST         ADDR         LABELS          STATUS
+ceph-mds-01  10.130.0.31  mds
+ceph-mds-02  10.130.0.32  mds
+ceph-mon-01  10.130.0.41  _admin,mon,mgr
+ceph-mon-02  10.130.0.42  _admin,mon,mgr
+ceph-mon-03  10.130.0.43  _admin,mon      Offline
+5 hosts in cluster
+```
+
+Проверим состояние кластера:
+
+```text
+root@ceph-mon-01:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_WARN
+            1/3 mons down, quorum ceph-mon-01,ceph-mon-02
+            2 osds down
+            1 host (2 osds) down
+            1 rack (2 osds) down
+            Degraded data redundancy: 43/129 objects degraded (33.333%), 29 pgs degraded, 337 pgs undersized
+
+  services:
+    mon: 3 daemons, quorum ceph-mon-01,ceph-mon-02 (age 2m) [leader: ceph-mon-01], out of quorum: ceph-mon-03
+    mgr: ceph-mon-01.mplubp(active, since 83m), standbys: ceph-mon-02.espiad
+    mds: 1/1 daemons up, 1 standby
+    osd: 8 osds: 6 up (since 2m), 8 in (since 74m)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 337 pgs
+    objects: 43 objects, 1.8 MiB
+    usage:   360 MiB used, 80 GiB / 80 GiB avail
+    pgs:     43/129 objects degraded (33.333%)
+             308 active+undersized
+             29  active+undersized+degraded
+```
+
+На клиенте при этом продолжают работать как **rbd** тома, так и **cephfs**.
+
+Удалим вышедший из строя хост из кластера:
+
+```text
+root@ceph-mon-01:~# ceph orch host rm ceph-mon-03 --offline --force
+Removed offline host 'ceph-mon-03'
+```
+
+Восстановление данные не началось, так как это был единственный узел в **rack3**:
+
+```text
+root@ceph-mon-01:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_WARN
+            Degraded data redundancy: 84/387 objects degraded (21.705%), 47 pgs degraded, 220 pgs undersized
+
+  services:
+    mon: 2 daemons, quorum ceph-mon-01,ceph-mon-02 (age 18s) [leader: ceph-mon-01]
+    mgr: ceph-mon-01.mplubp(active, since 90m), standbys: ceph-mon-02.espiad
+    mds: 1/1 daemons up, 1 standby
+    osd: 6 osds: 6 up (since 9m), 6 in (since 82m); 106 remapped pgs
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 337 pgs
+    objects: 129 objects, 32 MiB
+    usage:   336 MiB used, 60 GiB / 60 GiB avail
+    pgs:     84/387 objects degraded (21.705%)
+             43/387 objects misplaced (11.111%)
+             183 active+undersized
+             106 active+clean+remapped
+             47  active+undersized+degraded
+             1   active+clean
+
+  io:
+    client:   60 KiB/s wr, 0 op/s rd, 0 op/s wr
+    recovery: 211 KiB/s, 1 objects/s
+
+root@ceph-mon-01:~# ceph osd tree
+ID  CLASS  WEIGHT   TYPE NAME                 STATUS  REWEIGHT  PRI-AFF
+-1         0.05878  root default
+-3         0.02939      rack rack1
+-2         0.01959          host ceph-mds-01
+ 0    hdd  0.00980              osd.0             up   1.00000  1.00000
+ 1    hdd  0.00980              osd.1             up   1.00000  1.00000
+-6         0.00980          host ceph-mon-01
+ 2    hdd  0.00980              osd.2             up   1.00000  1.00000
+-5         0.02939      rack rack2
+-4         0.01959          host ceph-mds-02
+ 3    hdd  0.00980              osd.3             up   1.00000  1.00000
+ 4    hdd  0.00980              osd.4             up   1.00000  1.00000
+-7         0.00980          host ceph-mon-02
+ 5    hdd  0.00980              osd.5             up   1.00000  1.00000
+-9               0      rack rack3
+```
+
+Чтобы восстановить кластер переместим **ceph-mon-02** в **rack3**:
+
+```text
+root@ceph-mon-01:~# ceph osd crush move ceph-mon-02 rack=rack3
+moved item id -7 name 'ceph-mon-02' to location {rack=rack3} in crush map
+root@ceph-mon-01:~# ceph osd tree
+ID  CLASS  WEIGHT   TYPE NAME                 STATUS  REWEIGHT  PRI-AFF
+-1         0.05878  root default
+-3         0.02939      rack rack1
+-2         0.01959          host ceph-mds-01
+ 0    hdd  0.00980              osd.0             up   1.00000  1.00000
+ 1    hdd  0.00980              osd.1             up   1.00000  1.00000
+-6         0.00980          host ceph-mon-01
+ 2    hdd  0.00980              osd.2             up   1.00000  1.00000
+-5         0.01959      rack rack2
+-4         0.01959          host ceph-mds-02
+ 3    hdd  0.00980              osd.3             up   1.00000  1.00000
+ 4    hdd  0.00980              osd.4             up   1.00000  1.00000
+-9         0.00980      rack rack3
+-7         0.00980          host ceph-mon-02
+ 5    hdd  0.00980              osd.5             up   1.00000  1.00000
+```
+
+Началось восстановление данных:
+
+```text
+root@ceph-mon-01:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_WARN
+            1 stray host(s) with 1 daemon(s) not managed by cephadm
+
+  services:
+    mon: 2 daemons, quorum ceph-mon-01,ceph-mon-02 (age 10m) [leader: ceph-mon-01]
+    mgr: ceph-mon-01.mplubp(active, since 101m), standbys: ceph-mon-02.espiad
+    mds: 1/1 daemons up, 1 standby
+    osd: 6 osds: 6 up (since 20m), 6 in (since 92m)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 337 pgs
+    objects: 129 objects, 32 MiB
+    usage:   364 MiB used, 60 GiB / 60 GiB avail
+    pgs:     337 active+clean
+
+  io:
+    recovery: 53 KiB/s, 0 objects/s
+```
+
+Мы имеем сообщение `1 stray host(s) with 1 daemon(s) not managed by cephadm`. Посмотрим детали:
+
+```text
+root@ceph-mon-01:~# ceph health detail
+HEALTH_WARN 1 stray host(s) with 1 daemon(s) not managed by cephadm
+[WRN] CEPHADM_STRAY_HOST: 1 stray host(s) with 1 daemon(s) not managed by cephadm
+    stray host ceph-mon-03 has 1 stray daemons: ['mon.ceph-mon-02']
+```
+
+По всей видимости эта запись осталась в кеше менеджера, исправим проблему:
+
+```text
+root@ceph-mon-01:~# ceph mgr fail
+root@ceph-mon-01:~# ceph health detail
+HEALTH_OK
+root@ceph-mon-01:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_OK
+
+  services:
+    mon: 2 daemons, quorum ceph-mon-01,ceph-mon-02 (age 19m) [leader: ceph-mon-01]
+    mgr: ceph-mon-02.espiad(active, since 77s), standbys: ceph-mon-01.mplubp
+    mds: 1/1 daemons up, 1 standby
+    osd: 6 osds: 6 up (since 28m), 6 in (since 101m)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 337 pgs
+    objects: 129 objects, 32 MiB
+    usage:   364 MiB used, 60 GiB / 60 GiB avail
+    pgs:     337 active+clean
+```
+
+Удалим `/etc/ceph/hosts-spec.yml` (чтобы повторно применить спецификацию):
+
+```text
+root@ceph-mon-01:~# rm /etc/ceph/hosts-spec.yml
+```
+
+С помощью `terraform apply` восстановим удалённый узел, и установим туда **ceph** с помощью `./provision.sh`. Мы восстановили кластер:
+
+```text
+root@ceph-mon-01:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_OK
+
+  services:
+    mon: 3 daemons, quorum ceph-mon-01,ceph-mon-02,ceph-mon-03 (age 2m) [leader: ceph-mon-01]
+    mgr: ceph-mon-02.espiad(active, since 27m), standbys: ceph-mon-01.mplubp
+    mds: 1/1 daemons up, 1 standby
+    osd: 8 osds: 8 up (since 2m), 8 in (since 2h)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 337 pgs
+    objects: 129 objects, 32 MiB
+    usage:   438 MiB used, 80 GiB / 80 GiB avail
+    pgs:     337 active+clean
+
+root@ceph-mon-01:~# ceph osd tree
+ID  CLASS  WEIGHT   TYPE NAME                 STATUS  REWEIGHT  PRI-AFF
+-1         0.07837  root default
+-3         0.02939      rack rack1
+-2         0.01959          host ceph-mds-01
+ 0    hdd  0.00980              osd.0             up   1.00000  1.00000
+ 1    hdd  0.00980              osd.1             up   1.00000  1.00000
+-6         0.00980          host ceph-mon-01
+ 2    hdd  0.00980              osd.2             up   1.00000  1.00000
+-5         0.01959      rack rack2
+-4         0.01959          host ceph-mds-02
+ 3    hdd  0.00980              osd.3             up   1.00000  1.00000
+ 4    hdd  0.00980              osd.4             up   1.00000  1.00000
+-9         0.02939      rack rack3
+-7         0.00980          host ceph-mon-02
+ 5    hdd  0.00980              osd.5             up   1.00000  1.00000
+-8         0.01959          host ceph-mon-03
+ 6    hdd  0.00980              osd.6             up   1.00000  1.00000
+ 7    hdd  0.00980              osd.7             up   1.00000  1.00000
+```
+
+## Сбой стойки
+
+Выключим все сервера в **rack1** (**ceph-mds-01** и **ceph-mon-01**), это не должно отразиться на работоспособности кластера:
+
+```text
+root@ceph-mon-02:~# ceph orch host ls
+HOST         ADDR         LABELS          STATUS
+ceph-mds-01  10.130.0.31  mds             Offline
+ceph-mds-02  10.130.0.32  mds
+ceph-mon-01  10.130.0.41  _admin,mon,mgr  Offline
+ceph-mon-02  10.130.0.42  _admin,mon,mgr
+ceph-mon-03  10.130.0.43  _admin,mon
+5 hosts in cluster
+```
+
+Файловые система и тома **rbd** остаются полностью доступны на клиенте:
+
+```text
+root@ceph-cli-01:/mnt/cephfs# rbd device list
+id  pool  namespace  image  snap  device
+0   rbd              vol1   -     /dev/rbd0
+1   rbd              vol2   -     /dev/rbd1
+2   rbd              vol3   -     /dev/rbd2
+
+root@ceph-cli-01:/mnt/cephfs# mkfs.ext4 /dev/rbd2
+mke2fs 1.47.0 (5-Feb-2023)
+Discarding device blocks: done
+Creating filesystem with 262144 4k blocks and 65536 inodes
+Filesystem UUID: b8582017-050d-4350-b5fd-09a4937557ca
+Superblock backups stored on blocks:
+        32768, 98304, 163840, 229376
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (8192 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+root@ceph-cli-01:/mnt/cephfs# ls -la
+total 4
+drwxr-xr-x 3 root root    1 May  5 18:26 .
+drwxr-xr-x 3 root root 4096 May  5 17:07 ..
+drwxr-xr-x 2 root root  211 May  5 18:26 bin
+```
+
+Кластер перешёл в состояние `HEALTH_WARN`:
+
+```text
+root@ceph-mon-02:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_WARN
+            insufficient standby MDS daemons available
+            1/3 mons down, quorum ceph-mon-02,ceph-mon-03
+            3 osds down
+            2 hosts (3 osds) down
+            1 rack (3 osds) down
+            Degraded data redundancy: 134/408 objects degraded (32.843%), 85 pgs degraded, 336 pgs undersized
+
+  services:
+    mon: 3 daemons, quorum ceph-mon-02,ceph-mon-03 (age 3m) [leader: ceph-mon-02], out of quorum: ceph-mon-01
+    mgr: ceph-mon-02.espiad(active, since 51m)
+    mds: 1/1 daemons up
+    osd: 8 osds: 5 up (since 2m), 8 in (since 2h)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 337 pgs
+    objects: 136 objects, 33 MiB
+    usage:   474 MiB used, 80 GiB / 80 GiB avail
+    pgs:     134/408 objects degraded (32.843%)
+             251 active+undersized
+             85  active+undersized+degraded
+             1   active+clean
+```
+
+3 osd недоступны и существующие правила CRUSH делают восстановление невозможным (так как доступны только 2 стойки, а согласно правилам нужно 3):
+
+```text
+root@ceph-mon-02:~# ceph osd status
+ID  HOST          USED  AVAIL  WR OPS  WR DATA  RD OPS  RD DATA  STATE
+ 0  ceph-mds-01  62.5M  9.93G      0        0       0        0   exists
+ 1  ceph-mds-01  72.2M  9.92G      0        0       0        0   exists
+ 2  ceph-mon-01  48.9M  9.94G      0        0       0        0   exists
+ 3  ceph-mds-02  60.2M  9.93G      0        0       0        0   exists,up
+ 4  ceph-mds-02  62.1M  9.93G      0        0       0        0   exists,up
+ 5  ceph-mon-02  52.1M  9.94G      0        0       0        0   exists,up
+ 6  ceph-mon-03  62.8M  9.93G      0        0       0        0   exists,up
+ 7  ceph-mon-03  53.0M  9.94G      0        0       0        0   exists,up
+```
+
+Включим узлы. Здоровье кластера восстановилось:
+
+```text
+root@ceph-mon-02:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_OK
+
+  services:
+    mon: 3 daemons, quorum ceph-mon-01,ceph-mon-02,ceph-mon-03 (age 51s) [leader: ceph-mon-01]
+    mgr: ceph-mon-02.espiad(active, since 56m), standbys: ceph-mon-01.mplubp
+    mds: 1/1 daemons up, 1 standby
+    osd: 8 osds: 8 up (since 31s), 8 in (since 2h)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 337 pgs
+    objects: 136 objects, 33 MiB
+    usage:   807 MiB used, 79 GiB / 80 GiB avail
+    pgs:     337 active+clean
+```
+
+## Расширить кластер на 2+osd
+
+Для `10` дисков объёмом в `10 GiB` и фактором репликации `3` размер хранилища будет `33.3 GiB`.
+
+Для `10` дисков и фактора репликации `3` получаем:
+
+- `256 PG` для RDB пулов в `70%` от общего объёма (`233` округлены до `256`);
+- `128 PG` для CephFS пулов в `30%` от общего объёма (`100` округлены до `128`).
+
+Под метаданные для CephFS логично выделить четверть (или меньшее количество) PG, чем под данные (т.е. `32 PG`).
+
+Посмотрим доступные диски:
+
+```text
+root@ceph-mon-02:~# ceph orch device ls
+HOST         PATH      TYPE  DEVICE ID              SIZE  AVAILABLE  REFRESHED  REJECT REASONS
+ceph-mds-01  /dev/vdb  hdd   fv4q6sep8oj4p0qpbgnm  10.0G  No         3m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mds-01  /dev/vdc  hdd   fv422g2sg65qej2j3qoa  10.0G  No         3m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mds-02  /dev/vdb  hdd   fv4oi5ncp3mpvddr5hc4  10.0G  No         12m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mds-02  /dev/vdc  hdd   fv427mljfv2gjm8k801c  10.0G  No         12m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-01  /dev/vdb  hdd   fv4q0a3d55qi79bu2dm6  10.0G  No         3m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-01  /dev/vdc  hdd   fv4v76l6uaosoip0fban  10.0G  Yes        3m ago
+ceph-mon-02  /dev/vdb  hdd   fv4nk75162s4pglqt92f  10.0G  No         12m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-02  /dev/vdc  hdd   fv4gg0q43bp6qq2517fi  10.0G  Yes        12m ago
+ceph-mon-03  /dev/vdb  hdd   fv4eo3dn94li3498ql7m  10.0G  No         4m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-03  /dev/vdc  hdd   fv4bh1gm0q82ac0ajgpf  10.0G  No         4m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+```
+
+Видно, что у нас доступны диски `/dev/vdc` на `ceph-mon-01` и `ceph-mon-02`, добавим их:
+
+```text
+root@ceph-mon-02:~# ceph orch daemon add osd ceph-mon-01:/dev/vdc
+Created osd(s) 8 on host 'ceph-mon-01'
+root@ceph-mon-02:~# ceph orch daemon add osd ceph-mon-02:/dev/vdc
+Created osd(s) 9 on host 'ceph-mon-02'
+```
+
+Проверим OSD и место:
+
+```text
+root@ceph-mon-02:~# ceph osd status
+ID  HOST          USED  AVAIL  WR OPS  WR DATA  RD OPS  RD DATA  STATE
+ 0  ceph-mds-01  45.6M  9.95G      0        0       0        0   exists,up
+ 1  ceph-mds-01  37.2M  9.95G      0        0       0        0   exists,up
+ 2  ceph-mon-01  48.7M  9.94G      0        0       0        0   exists,up
+ 3  ceph-mds-02  76.3M  9.92G      0        0       0        0   exists,up
+ 4  ceph-mds-02  64.6M  9.93G      0        0       0        0   exists,up
+ 5  ceph-mon-02  67.4M  9.93G      0        0       0        0   exists,up
+ 6  ceph-mon-03  58.7M  9.93G      0        0       0        0   exists,up
+ 7  ceph-mon-03  51.3M  9.94G      0        0       0        0   exists,up
+ 8  ceph-mon-01  49.3M  9.94G      0        0       0        0   exists,up
+ 9  ceph-mon-02  38.0M  9.95G      0        0       0        0   exists,up
+root@ceph-mon-02:~# ceph df
+--- RAW STORAGE ---
+CLASS     SIZE   AVAIL     USED  RAW USED  %RAW USED
+hdd    100 GiB  99 GiB  537 MiB   537 MiB       0.53
+TOTAL  100 GiB  99 GiB  537 MiB   537 MiB       0.53
+
+--- POOLS ---
+POOL             ID  PGS   STORED  OBJECTS     USED  %USED  MAX AVAIL
+.mgr              1    1  769 KiB        2  2.3 MiB      0     31 GiB
+rbd               2  256  1.2 MiB       26  3.6 MiB      0     31 GiB
+cephfs_data       3   64   29 MiB       85   87 MiB   0.09     31 GiB
+cephfs_metadata   4   16  1.4 MiB       23  4.2 MiB      0     31 GiB
+root@ceph-mon-02:~#
+```
+
+Увеличим количество PG для `cephfs_data` и `cephfs_metadata`:
+
+```text
+root@ceph-mon-02:~# ceph osd pool set cephfs_data pg_num 128
+set pool 3 pg_num to 128
+root@ceph-mon-02:~# ceph osd pool set cephfs_data pgp_num 128
+set pool 3 pgp_num to 128
+root@ceph-mon-02:~# ceph osd pool set cephfs_metadata pg_num 32
+set pool 4 pg_num to 32
+root@ceph-mon-02:~# ceph osd pool set cephfs_metadata pgp_num 32
+set pool 4 pgp_num to 32
+```
+
+Готово, мы добавили два новых OSD и увеличили количество PG:
+
+```text
+root@ceph-mon-02:~# ceph df
+--- RAW STORAGE ---
+CLASS     SIZE   AVAIL     USED  RAW USED  %RAW USED
+hdd    100 GiB  99 GiB  610 MiB   610 MiB       0.60
+TOTAL  100 GiB  99 GiB  610 MiB   610 MiB       0.60
+
+--- POOLS ---
+POOL             ID  PGS   STORED  OBJECTS     USED  %USED  MAX AVAIL
+.mgr              1    1  769 KiB        2  2.3 MiB      0     31 GiB
+rbd               2  256  1.2 MiB       26  3.6 MiB      0     31 GiB
+cephfs_data       3  128   29 MiB       85   87 MiB   0.09     31 GiB
+cephfs_metadata   4   32  1.4 MiB       23  4.2 MiB      0     31 GiB
+```
+
+## Уменьшить кластер на 1+osd
+
+Для `9` дисков объёмом в `10 GiB` и фактором репликации `3` размер хранилища будет `30 GiB`.
+
+Для `9` дисков и фактора репликации `3` получаем:
+
+- `256 PG` для RDB пулов в `70%` от общего объёма (`210` округлены до `256`);
+- `128 PG` для CephFS пулов в `30%` от общего объёма (`90` округлены до `128`).
+
+Под метаданные для CephFS логично выделить четверть (или меньшее количество) PG, чем под данные (т.е. `32 PG`).
+
+```text
+root@ceph-mon-02:~# ceph osd status
+ID  HOST          USED  AVAIL  WR OPS  WR DATA  RD OPS  RD DATA  STATE
+ 0  ceph-mds-01  55.8M  9.94G      0        0       0        0   exists,up
+ 1  ceph-mds-01  53.2M  9.94G      0        0       0        0   exists,up
+ 2  ceph-mon-01  54.2M  9.94G      0        0       0        0   exists,up
+ 3  ceph-mds-02  65.9M  9.93G      0        0       0        0   exists,up
+ 4  ceph-mds-02  94.7M  9.90G      0        0       0        0   exists,up
+ 5  ceph-mon-02  52.7M  9.94G      0        0       0        0   exists,up
+ 6  ceph-mon-03  76.5M  9.92G      0        0       0        0   exists,up
+ 7  ceph-mon-03  68.6M  9.92G      0        0       0        0   exists,up
+ 8  ceph-mon-01  74.6M  9.92G      0        0       0        0   exists,up
+ 9  ceph-mon-02  74.5M  9.92G      0        0       0        0   exists,up
+```
+
+Освободим место на osd 4:
+
+```text
+root@ceph-mon-02:~# ceph orch set-unmanaged osd.ceph_mds_02
+Set unmanaged to True for service osd.ceph_mds_02
+root@ceph-mon-02:~# ceph osd out 4
+marked out osd.4.
+root@ceph-mon-02:~# ceph osd status
+ID  HOST          USED  AVAIL  WR OPS  WR DATA  RD OPS  RD DATA  STATE
+ 0  ceph-mds-01  55.8M  9.94G      0        0       0        0   exists,up
+ 1  ceph-mds-01  53.3M  9.94G      0        0       0        0   exists,up
+ 2  ceph-mon-01  54.3M  9.94G      0        0       0        0   exists,up
+ 3  ceph-mds-02  67.3M  9.93G      0        0       0        0   exists,up
+ 4  ceph-mds-02     0      0       0        0       0        0   exists,up
+ 5  ceph-mon-02  52.8M  9.94G      0        0       0        0   exists,up
+ 6  ceph-mon-03  76.6M  9.92G      0        0       0        0   exists,up
+ 7  ceph-mon-03  68.6M  9.92G      0        0       0        0   exists,up
+ 8  ceph-mon-01  74.6M  9.92G      0        0       0        0   exists,up
+ 9  ceph-mon-02  74.5M  9.92G      0        0       0        0   exists,up
+```
+
+Проверяем состояние кластера:
+
+```text
+root@ceph-mon-02:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_OK
+
+  services:
+    mon: 3 daemons, quorum ceph-mon-01,ceph-mon-02,ceph-mon-03 (age 47m) [leader: ceph-mon-01]
+    mgr: ceph-mon-02.espiad(active, since 103m), standbys: ceph-mon-01.mplubp
+    mds: 1/1 daemons up, 1 standby
+    osd: 10 osds: 10 up (since 8m), 9 in (since 43s)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 417 pgs
+    objects: 136 objects, 33 MiB
+    usage:   608 MiB used, 89 GiB / 90 GiB avail
+    pgs:     417 active+clean
+```
+
+Удаляем osd 4:
+
+```text
+root@ceph-mon-02:~# ceph orch osd rm 4 --zap
+Scheduled OSD(s) for removal.
+```
+
+Готово:
+
+```text
+root@ceph-mon-02:~# ceph osd status
+ID  HOST          USED  AVAIL  WR OPS  WR DATA  RD OPS  RD DATA  STATE
+ 0  ceph-mds-01  52.0M  9.94G      0        0       0        0   exists,up
+ 1  ceph-mds-01  53.4M  9.94G      0        0       0        0   exists,up
+ 2  ceph-mon-01  54.4M  9.94G      0        0       0        0   exists,up
+ 3  ceph-mds-02  96.6M  9.90G      0        0       0        0   exists,up
+ 5  ceph-mon-02  55.1M  9.94G      0        0       0        0   exists,up
+ 6  ceph-mon-03  76.7M  9.92G      0        0       0        0   exists,up
+ 7  ceph-mon-03  66.6M  9.93G      0        0       0        0   exists,up
+ 8  ceph-mon-01  78.7M  9.91G      0        0       0        0   exists,up
+ 9  ceph-mon-02  74.6M  9.92G      0        0       0        0   exists,up
+root@ceph-mon-02:~# ceph df
+--- RAW STORAGE ---
+CLASS    SIZE   AVAIL     USED  RAW USED  %RAW USED
+hdd    90 GiB  89 GiB  608 MiB   608 MiB       0.66
+TOTAL  90 GiB  89 GiB  608 MiB   608 MiB       0.66
+
+--- POOLS ---
+POOL             ID  PGS   STORED  OBJECTS     USED  %USED  MAX AVAIL
+.mgr              1    1  1.1 MiB        2  3.4 MiB      0     28 GiB
+rbd               2  256  1.2 MiB       26  3.6 MiB      0     28 GiB
+cephfs_data       3  128   29 MiB       84   87 MiB   0.10     28 GiB
+cephfs_metadata   4   32  1.4 MiB       23  4.2 MiB      0     28 GiB
+```
+
+Проверяем состояние кластера:
+
+```text
+root@ceph-mon-02:~# ceph status
+  cluster:
+    id:     2a882841-48a3-11f1-838c-d00d99b60350
+    health: HEALTH_OK
+
+  services:
+    mon: 3 daemons, quorum ceph-mon-01,ceph-mon-02,ceph-mon-03 (age 48m) [leader: ceph-mon-01]
+    mgr: ceph-mon-02.espiad(active, since 104m), standbys: ceph-mon-01.mplubp
+    mds: 1/1 daemons up, 1 standby
+    osd: 9 osds: 9 up (since 53s), 9 in (since 2m); 1 remapped pgs
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 417 pgs
+    objects: 136 objects, 33 MiB
+    usage:   608 MiB used, 89 GiB / 90 GiB avail
+    pgs:     416 active+clean
+             1   active+clean+remapped
+```
+
+Диск стал сново доступным:
+
+```text
+
+root@ceph-mon-02:~# ceph orch device ls
+HOST         PATH      TYPE  DEVICE ID              SIZE  AVAILABLE  REFRESHED  REJECT REASONS
+ceph-mds-01  /dev/vdb  hdd   fv4q6sep8oj4p0qpbgnm  10.0G  No         17m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mds-01  /dev/vdc  hdd   fv422g2sg65qej2j3qoa  10.0G  No         17m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mds-02  /dev/vdb  hdd   fv4oi5ncp3mpvddr5hc4  10.0G  No         80s ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mds-02  /dev/vdc  hdd   fv427mljfv2gjm8k801c  10.0G  Yes        80s ago
+ceph-mon-01  /dev/vdb  hdd   fv4q0a3d55qi79bu2dm6  10.0G  No         10m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-01  /dev/vdc  hdd   fv4v76l6uaosoip0fban  10.0G  No         10m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-02  /dev/vdb  hdd   fv4nk75162s4pglqt92f  10.0G  No         8m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-02  /dev/vdc  hdd   fv4gg0q43bp6qq2517fi  10.0G  No         8m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-03  /dev/vdb  hdd   fv4eo3dn94li3498ql7m  10.0G  No         19m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+ceph-mon-03  /dev/vdc  hdd   fv4bh1gm0q82ac0ajgpf  10.0G  No         19m ago    Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected
+```
