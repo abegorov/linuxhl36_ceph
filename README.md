@@ -928,3 +928,31 @@ tmpfs              tmpfs  5.0M     0  5.0M   0% /run/lock
 tmpfs              tmpfs  197M  8.0K  197M   1% /run/user/1000
 10.130.0.41:6789:/ ceph    26G     0   26G   0% /mnt/cephfs
 ```
+
+Проверим работу **dashboard**:
+
+![Overview](images/overview.png)
+
+![Pools](images/pools.png)
+
+![Hosts](images/hosts.png)
+
+![OSDs](images/osds.png)
+
+![Physical disks](images/disks.png)
+
+![CRUSH map](images/crush.png)
+
+![Monitors](images/monitors.png)
+
+![Images](images/images.png)
+
+![File systems](images/filesystems.png)
+
+![Services](images/services.png)
+
+![Upgrade](images/upgrade.png)
+
+![Ceph users](images/users.png)
+
+![Manager modules](images/modules.png)
