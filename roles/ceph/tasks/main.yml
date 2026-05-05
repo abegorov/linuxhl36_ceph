@@ -14,4 +14,13 @@
 - name: Import auth tasks
   ansible.builtin.import_tasks: auth.yml
   tags: [ceph, ceph_auth]
+
+- name: Fetch ceph client config
+  delegate_to: '{{ ceph_bootstrap_host }}'
+  run_once: true
+  ansible.builtin.fetch:
+    src: /etc/ceph/ceph.conf
+    dest: '{{ ceph_conf_file }}'
+    flat: true
+  tags: [ceph, ceph_config]
 ...
