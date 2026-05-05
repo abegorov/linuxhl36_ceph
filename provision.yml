@@ -4,6 +4,7 @@
   become: true
   gather_facts: false
   roles:
+    - wait_connection
     - apt_sources
     - chrony
     - ceph_common
